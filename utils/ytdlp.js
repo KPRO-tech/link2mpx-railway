@@ -113,7 +113,9 @@ async function downloadVideo(url, formatId = 'best', userId = 'anonymous') {
     
     let command;
     
+    let ext = 'mp4';
     if (formatId === 'bestaudio') {
+      ext = 'mp3';
       // Téléchargement audio MP3
       command = `yt-dlp -f bestaudio --extract-audio --audio-format mp3 --audio-quality 0 -o "${outputPath}.%(ext)s" "${url}"`;
     } else {
@@ -135,10 +137,12 @@ async function downloadVideo(url, formatId = 'best', userId = 'anonymous') {
     // Pour l'instant on retourne juste le path local
     // ATTENTION : Sur Vercel, /tmp est temporaire et limité
     
+    const finalFilePath = `${outputPath}.${ext}`;
+
     return {
       success: true,
-      downloadUrl: `${outputPath}.mp4`, // À remplacer par une vraie URL après upload
-      filePath: outputPath,
+      downloadUrl: finalFilePath, 
+      filePath: finalFilePath,
       message: 'Vidéo téléchargée avec succès'
     };
 

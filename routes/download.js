@@ -41,23 +41,36 @@ router.post('/', async (req, res) => {
     // Téléchargement avec yt-dlp
     const result = await downloadVideo(url, format, userId);
 
-    // IMPORTANT : Dans un vrai système, il faudrait :
-    // 1. Uploader le fichier sur un CDN (AWS S3, Cloudflare R2, etc.)
-    // 2. Générer une URL signée temporaire (expire après 1h)
-    // 3. Supprimer le fichier local après upload
-    // 4. Retourner l'URL signée au client
+    if (!result.success) {
+      return res.status(500).json(result);
+    }
 
-    // Pour l'instant on retourne juste le path local (ne marchera pas en production)
-    res.json({
-      success: true,
-      downloadUrl: result.downloadUrl,
-      expiresAt: Date.now() + 3600000, // 1h
-      message: 'Téléchargement prêt'
+    const filePath = result.downloadUrl; // Le chemin local /tmp/...
+
+    // IMPORTANT : On renvoie le fichier directement au client
+    // Le serveur va lire le fichier dans /tmp et l'envoyer en stream au navigateur
+    res.download(filePath, (err) => {
+      if (err) {
+        console.error("Erreur lors de l'envoi du fichier:", err);
+        if (!res.headersSent) {
+          res.status(500).send("Erreur lors du téléchargement");
+        }
+      }
+
+      // Nettoyage : Supprimer le fichier après l'envoi pour ne pas remplir le disque
+      try {
+        const fs = require('fs');
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      } catch (e) {
+        console.error("Erreur suppression fichier temp:", e);
+      }
     });
 
   } catch (error) {
     console.error('Erreur route /download:', error);
-    
+
     res.status(500).json({
       success: false,
       error: error.message || 'Erreur lors du téléchargement'
